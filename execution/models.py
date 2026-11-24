@@ -56,11 +56,6 @@ class Observation(BaseModel):
         return self.model_copy(update={"waits": built})
 
 
-class WorkflowDisplay(BaseModel):
-    model_config = ConfigDict(extra="ignore", populate_by_name=True)
-    display_name: str | None = Field(default=None, validation_alias="displayName")
-
-
 class ExecutionResource(BaseModel):
     model_config = ConfigDict(extra="ignore")
     name: str = Field(min_length=1)

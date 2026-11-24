@@ -40,6 +40,12 @@ class VerificationToolsTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, {"status": "not_found"})
         self.assertNotIn(ACCOUNT_NAME, flow.state)
 
+    async def test_find_account_tolerates_stray_digit_in_caller_sentence(self):
+        flow = FakeFlow([{"role": "user", "content": "my 1 account number is 555 010 2000"}])
+        result = await find_account(flow, "5550102000")
+        self.assertEqual(result, {"status": "found", "name": "Jordan"})
+        self.assertEqual(flow.state[ACCOUNT_NAME], "Jordan")
+
     async def test_third_account_miss_refuses(self):
         flow = FakeFlow([{"role": "user", "content": "wrong"}])
         for _ in range(2):

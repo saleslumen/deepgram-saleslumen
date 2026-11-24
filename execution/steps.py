@@ -1,4 +1,3 @@
-import json
 import re
 from dataclasses import dataclass
 from enum import Enum
@@ -125,19 +124,6 @@ def spoken_line(item: Step) -> str | None:
             return None
         return " ".join(_clause(value) for value in values)
     return _finish(item.message)
-
-
-def present(item: Step, workflow: str) -> str:
-    if isinstance(item, Running):
-        body: dict[str, Any] = {"kind": "running"}
-    elif isinstance(item, Awaiting):
-        body = {"kind": "awaiting_input", "label": item.label}
-    elif isinstance(item, Succeeded):
-        body = {"kind": "succeeded", "result": item.result}
-    else:
-        body = {"kind": "failed", "message": item.message}
-    body["workflow"] = workflow
-    return json.dumps(body, sort_keys=True, separators=(",", ":"), default=str)
 
 
 def parse_fields(schema: str) -> tuple[Argument, ...]:

@@ -28,6 +28,7 @@ class _FakeClient:
         self.queue = asyncio.Queue()
         self.signaled = []
         self.cancelled = []
+        self.closed_count = 0
         self.create_error = None
         self.signal_error = None
         self.revision_error = None
@@ -60,8 +61,8 @@ class _FakeClient:
             finally:
                 self.queue.task_done()
 
-    async def display_name(self):
-        return "Hello voice"
+    async def aclose(self):
+        self.closed_count += 1
 
     async def revision(self, name):
         if self.revision_error is not None:
@@ -147,7 +148,7 @@ class RunTest(unittest.IsolatedAsyncioTestCase):
             self.assertIsInstance(result, Accepted)
             awaiting = [line.strip() for line in lines if "awaiting" in line]
             self.assertEqual(awaiting, [f"Execution {run.execution_id} version 2 awaiting sequence 4 step confirm"])
-            pending = asyncio.create_task(run.next_after(run.version))
+            pending = asyncio.create_task(run.signal(4, {"accepted": True}))
             await asyncio.sleep(0)
             await client.queue.put(Observation.model_validate(execution("STATE_SUCCEEDED", 5, result={"message": outcome})))
             done = await asyncio.wait_for(pending, timeout=2.0)
@@ -309,8 +310,10 @@ class RunTest(unittest.IsolatedAsyncioTestCase):
         await _start_waiting(run, client)
         await run.close()
         self.assertEqual(client.cancelled, [execution_key("run-1", 1)])
+        self.assertEqual(client.closed_count, 1)
         await run.close()
         self.assertEqual(client.cancelled, [execution_key("run-1", 1)])
+        self.assertEqual(client.closed_count, 1)
         self.assertFalse(run.active)
 
     async def test_scheduled_task_is_cancelled_by_close(self):

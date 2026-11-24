@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from catalog.skills import SkillError, load_skills, skill_prompt
+from catalog.skills import SkillError, load_skills
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -19,8 +19,6 @@ class SkillTest(unittest.TestCase):
         self.assertIn("helps teams run sales outreach and automate the work around it", body)
         self.assertIn("one short sentence", body)
         self.assertIn("then stop", body)
-        self.assertNotIn("email outreach", skill_prompt(skills))
-        self.assertIn("Do not speak the description.", skill_prompt(skills))
 
     def test_name_must_match_the_directory(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -66,7 +66,6 @@ class Run:
         self._execution_id = ""
         self._created: ExecutionResource | None = None
         self._index = None
-        self._name = ""
         self._observation: Observation | None = None
         self._step: Step | None = None
         self._watch_task: asyncio.Task[None] | None = None
@@ -104,7 +103,6 @@ class Run:
             if await self._abort_if_closed():
                 return await self._fail_after_create(created, "CLOSED")
             definition = await self._client.revision(created.revision)
-            name = await self._client.display_name()
             try:
                 index = compile_index(definition)
             except StepError:
@@ -114,12 +112,12 @@ class Run:
             logger.warning("Workflow start failed: {}", code)
             if created is not None:
                 return await self._fail_after_create(created, code)
+            await self._close_client()
             return Failed(code)
         async with self._lock:
             closed = self._closed
             if not closed:
                 self._created = created
-                self._name = name
                 self._index = index
                 self._active = True
         if closed:
@@ -130,12 +128,6 @@ class Run:
         step, code = await self._wait(after=0, allow_running=False)
         if code is not None:
             return await self._fail_after_create(created, code)
-        return Accepted(step)
-
-    async def next_after(self, version: int) -> Accepted | Failed:
-        step, code = await self._wait(after=version, allow_running=True)
-        if code is not None:
-            return Failed(code)
         return Accepted(step)
 
     async def signal(self, sequence: int, payload: dict) -> SignalResult:
@@ -194,7 +186,15 @@ class Run:
                     pending.append(self._watch_task)
         if pending:
             await asyncio.wait(pending, timeout=2)
-        await self._cancel_open_once()
+        try:
+            await self._cancel_open_once()
+        finally:
+            await self._close_client()
+
+    async def _close_client(self) -> None:
+        aclose = getattr(self._client, "aclose", None)
+        if aclose is not None:
+            await aclose()
 
     def _current_step(self) -> Step:
         if self._step is None:
@@ -314,13 +314,16 @@ class Run:
             cancel_sent = self._cancel_sent
             observation = self._observation
         if closed:
-            if observation is not None and observation.state in TERMINAL_STATES:
+            try:
+                if observation is not None and observation.state in TERMINAL_STATES:
+                    return Failed(code)
+                if orphan_cancel or not cancel_sent:
+                    async with self._lock:
+                        self._cancel_sent = True
+                    await self._cancel_execution(created.execution_id)
                 return Failed(code)
-            if orphan_cancel or not cancel_sent:
-                async with self._lock:
-                    self._cancel_sent = True
-                await self._cancel_execution(created.execution_id)
-            return Failed(code)
+            finally:
+                await self._close_client()
         await self.close()
         return Failed(code)
 

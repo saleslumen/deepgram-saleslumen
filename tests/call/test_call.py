@@ -471,7 +471,7 @@ class CallTest(unittest.IsolatedAsyncioTestCase):
         task = call.question_node(step)["task_messages"][0]["content"]
         self.assertEqual(
             task,
-            'The workflow asked the caller: "I found a duplicate charge of twenty dollars. Please confirm the refund". When the caller answers, call answer_step. accepted: true if they agree, false if they decline. Until answer_step returns, nothing has been done; never say it is done, submitted, or processed. If the caller asks a question instead of answering, answer it briefly and ask the workflow question again in that same reply. If the caller\'s latest words answer the question, including yes, yeah, or thanks, call answer_step before any other words and do not ask the question again. Otherwise ask again and do not call answer_step without an answer. If the caller asks what the product is, call skill; do not answer that from memory.',
+            'The workflow asked the caller: "I found a duplicate charge of twenty dollars. Please confirm the refund". When the caller answers, call answer_step. accepted: true if they agree, false if they decline. Until answer_step returns, nothing has been done; never say it is done, submitted, or processed. If the caller asks a question instead of answering, answer it briefly and ask the workflow question again in that same reply. If the caller\'s latest words answer the question, including yes, yeah, or thanks, call answer_step before any other words and do not ask the question again. Otherwise ask again and do not call answer_step without an answer. If the caller asks something a skill covers, call skill; do not answer that from memory.',
         )
         schema = call._answer_step_schema(step)
         self.assertEqual(schema.properties["accepted"]["type"], "boolean")
@@ -529,6 +529,20 @@ class CallTest(unittest.IsolatedAsyncioTestCase):
         await call.run.scheduled[0]
         self.assertEqual(flow.nodes[-1]["pre_actions"][0]["text"], "The workflow failed.")
 
+    async def test_notice_ack_exception_recovers_to_failed_agent_node(self):
+        call = _call()
+        call._workflow_agent = "workflow"
+        step = Awaiting("Please wait.", "wait", 2, "wait", ())
+        run = FakeRun()
+        run.signal = AsyncMock(side_effect=RuntimeError("boom"))
+        call.run = run
+        flow = FakeFlow(state={}, nodes=[], messages=[])
+        node = call.notice_node(step)
+        await node["pre_actions"][1]["handler"]({"type": "function"}, flow)
+        await call.run.scheduled[0]
+        self.assertEqual(flow.nodes[-1]["name"], "workflow")
+        self.assertEqual(flow.nodes[-1]["pre_actions"][0]["text"], "The workflow failed.")
+
     async def test_terminal_node_speaks_the_line_and_responds(self):
         call = _call()
         call._workflow_agent = "workflow"
@@ -577,6 +591,8 @@ class CallTest(unittest.IsolatedAsyncioTestCase):
     async def test_skill_tool_returns_the_body(self):
         call = _call()
         schema = _schema(call, "workflow", "skill")
+        self.assertIn("saleslumen: Product facts.", schema.description)
+        self.assertIn("saleslumen: Product facts.", schema.properties["name"]["description"])
         flow = FakeFlow(state={}, nodes=[], messages=[])
         result, nxt = await _invoke(schema, {"name": "saleslumen"}, flow)
         self.assertEqual(result["body"], "Saleslumen body.")

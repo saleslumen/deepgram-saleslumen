@@ -95,6 +95,19 @@ class ThinkSettingsTest(unittest.IsolatedAsyncioTestCase):
         body = think_request(model="think-fast", messages=list(params["messages"]), tools=None, temperature=None)
         self.assertEqual(body["messages"][0], {"role": "system", "content": "From the flow node."})
 
+    async def test_think_service_reuses_and_closes_http_client(self):
+        service = DeepgramThinkLLMService(
+            deepgram_api_key="unused",
+            settings=DeepgramThinkLLMService.Settings(model="think-fast"),
+        )
+        first = service._http()
+        second = service._http()
+        self.assertIs(first, second)
+        self.assertFalse(first.is_closed)
+        await service.cleanup()
+        self.assertTrue(first.is_closed)
+        self.assertIsNone(service._http_client)
+
 
 if __name__ == "__main__":
     unittest.main()

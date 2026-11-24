@@ -137,21 +137,20 @@ class ClientTest(unittest.IsolatedAsyncioTestCase):
             await client.create("7c9e6679-7425-40de-944b-e07fc1f90ae7", "")
         self.assertIn("WORKFLOW_UNSELECTED", str(caught.exception))
 
-    async def test_display_name_ignores_the_serving_revision(self):
-        def handler(request: httpx.Request) -> httpx.Response:
-            self.assertEqual(request.method, "GET")
-            self.assertEqual(request.url.path, "/v1/workflows/hello-voice")
-            return httpx.Response(200, json={"displayName": "Hello voice", "servingRevision": "workflows/hello-voice/revisions/other"})
-        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
-            client = WorkflowClient(origin="https://workflows.saleslumenapis.com", saleslumen_api_key="token", organization_id="org", namespace_id="", client=http)
-            client.use("hello-voice")
-            self.assertEqual(await client.display_name(), "Hello voice")
-        def blank(request: httpx.Request) -> httpx.Response:
-            return httpx.Response(200, json={"displayName": "  ", "servingRevision": "workflows/hello-voice/revisions/other"})
-        async with httpx.AsyncClient(transport=httpx.MockTransport(blank)) as http:
-            client = WorkflowClient(origin="https://workflows.saleslumenapis.com", saleslumen_api_key="token", organization_id="org", namespace_id="", client=http)
-            client.use("hello-voice")
-            self.assertEqual(await client.display_name(), "hello-voice")
+    async def test_client_reuses_and_closes_owned_http_client(self):
+        client = WorkflowClient(origin="https://workflows.saleslumenapis.com", saleslumen_api_key="token", organization_id="org", namespace_id="")
+        async with client._http() as first:
+            pass
+        async with client._http() as second:
+            pass
+        self.assertIs(first, second)
+        self.assertFalse(first.is_closed)
+        await client.aclose()
+        self.assertTrue(first.is_closed)
+        async with httpx.AsyncClient() as borrowed:
+            borrowed_client = WorkflowClient(origin="https://workflows.saleslumenapis.com", saleslumen_api_key="token", organization_id="org", namespace_id="", client=borrowed)
+            await borrowed_client.aclose()
+            self.assertFalse(borrowed.is_closed)
 
     async def test_a_rejected_create_is_logged(self):
         lines = []
@@ -200,7 +199,7 @@ class ClientTest(unittest.IsolatedAsyncioTestCase):
             client = WorkflowClient(origin="https://workflows.saleslumenapis.com", saleslumen_api_key="token", organization_id="org", namespace_id="", client=http)
             client.use("hello-voice")
             with self.assertRaises(WorkflowError) as transport:
-                await client.display_name()
+                await client.revision("workflows/hello-voice/revisions/b")
         self.assertEqual(transport.exception.code, "WORKFLOWS_UNAVAILABLE")
         self.assertNotIn("SECRET", str(transport.exception))
         def broken(request: httpx.Request) -> httpx.Response:
@@ -209,7 +208,7 @@ class ClientTest(unittest.IsolatedAsyncioTestCase):
             client = WorkflowClient(origin="https://workflows.saleslumenapis.com", saleslumen_api_key="token", organization_id="org", namespace_id="", client=http)
             client.use("hello-voice")
             with self.assertRaises(WorkflowError) as payload:
-                await client.display_name()
+                await client.revision("workflows/hello-voice/revisions/b")
         self.assertEqual(payload.exception.code, "INVALID_RESPONSE")
         self.assertNotIn("SECRET", str(payload.exception))
 

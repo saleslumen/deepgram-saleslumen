@@ -86,9 +86,9 @@ Tools: `find_account`, `check_passcode` from `agents.verification.tools`. **acco
 
 ### Workflow agent
 
-Tools: `start_workflow(workflow, request)`, granted skill tools, `answer_step`, `end_call`. One execution at a time. First execution id is the call key; later starts use `{call key}-{attempt}`.
+Tools: `start_workflow(workflow, request)`, granted skill tools, `answer_step`, `end_call`. One execution at a time. Execution ids are `{call key}-{attempt}`, starting at 1.
 
-- **Question** steps: `tts_say` on the label. The task quotes that label and describes each `answer_step` argument. The model calls `answer_step` only after the caller answers. A side question is answered in the same reply that asks the workflow question again. A question about the product is a skill, then the same question again.
+- **Question** steps: `tts_say` on the label. The task quotes that label and describes each `answer_step` argument. The model calls `answer_step` only after the caller answers. A side question is answered in the same reply that asks the workflow question again. A question a skill covers is answered via `skill`, then the same question again.
 - **Notice** steps: speak the label and acknowledge.
 - A workflow result is only what a workflow line said. Agreeing to a question is not the result.
 
@@ -130,7 +130,7 @@ Environment keys mirror `.env.example` and `config.py` (see `README.md` table). 
 ## Commands
 
 ```bash
-cd $REPO_ROOT/sandbox/pipecat-saleslumen && uv run python -m unittest discover -s tests -t .
+uv run python -m unittest discover -s tests -t .
 node --test tests/live/draw.test.js tests/live/project.test.js
 uv run python bot.py -t webrtc
 ```
@@ -138,14 +138,14 @@ uv run python bot.py -t webrtc
 Pipecat evals (not part of the unit suite). The pipecat CLI is the `cli` extra of `pipecat-ai` 1.17.0 in the dev dependency group, installed by `uv sync`. The judge and the simulation persona LLM are OpenRouter via factory `evals.llm.openrouter` (module `evals/llm.py`), which loads the project `.env` the way `bot.py` does and reads `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` from `config.load()`—not from YAML. `evals/scripted/calls.yaml`: `done_after_outcome`, `skill_then_answer`, `yeah_thanks`, `clarify_then_yeah`, `three_wrong_codes`, `wrong_then_right_number`; each shared turn is defined once as a YAML anchor, because Pipecat's `!include` cannot splice turns into a list. `evals/simulations/callers.yaml`: impatient, confused. `evals/suite.yaml` lists those two paths. Text modality default—RTVI send-text, bot skips TTS. Assertions are flow nodes and function calls.
 
 ```bash
-cd $REPO_ROOT/sandbox/pipecat-saleslumen && uv run pipecat eval suite evals/suite.yaml
+uv run pipecat eval suite evals/suite.yaml
 ```
 
 ```bash
-cd $REPO_ROOT/sandbox/pipecat-saleslumen && uv run pipecat eval run evals/scripted --bot-url ws://localhost:7860/ws
+uv run pipecat eval run evals/scripted --bot-url ws://localhost:7860/ws
 ```
 
-The suite command spawns the bot. For `eval run`, start `cd $REPO_ROOT/sandbox/pipecat-saleslumen && uv run python bot.py` first (no `-t`; the harness connects to the dev runner WebSocket on `ws://localhost:7860/ws`).
+The suite command spawns the bot. For `eval run`, start `uv run python bot.py` first (no `-t`; the harness connects to the dev runner WebSocket on `ws://localhost:7860/ws`).
 
 ## Sharp edges
 
@@ -159,7 +159,7 @@ The suite command spawns the bot. For `eval run`, start `cd $REPO_ROOT/sandbox/p
 
 ## Done definition
 
-- `uv run python -m unittest discover -s tests -t .` passes from `sandbox/pipecat-saleslumen`.
+- `uv run python -m unittest discover -s tests -t .` passes.
 - Import boundary tests pass (`tests/catalog/test_import_rules.py`).
 - Docs match **Call** ownership, flow state fields, layout (`call/flow.py`), and dependency direction.
 - No blank lines inside function or method bodies in production packages.

@@ -1,10 +1,9 @@
 """The voice record joined from a pinned revision and a snapshot."""
 
-import json
 import unittest
 
 from execution.models import Observation, RevisionDefinition
-from execution.steps import UNSUPPORTED, Argument, Succeeded, answer_kind, AnswerKind, compile_index, parse_fields, present, project, spoken_line
+from execution.steps import UNSUPPORTED, Argument, Succeeded, answer_kind, AnswerKind, compile_index, parse_fields, project, spoken_line
 
 REVISION = "workflows/hello-voice/revisions/b"
 
@@ -64,9 +63,8 @@ class StepsTest(unittest.TestCase):
     def test_nested_loop_path_resolves_without_leaking_the_definition(self):
         index = compile_index(revision(definition()))
         item = project(index, snapshot("STATE_WAITING", "fan.right/each[17]/w", "approve_order"))
-        text = present(item, "Hello voice")
-        self.assertEqual(json.loads(text), {"kind": "awaiting_input", "label": "Approve the order", "workflow": "Hello voice"})
-        self.assertNotIn("approve_order", text)
+        self.assertEqual(item.label, "Approve the order")
+        self.assertEqual(spoken_line(item), "Approve the order.")
         self.assertEqual([field.name for field in item.arguments], ["decision", "quantity"])
         self.assertEqual(answer_kind(item.arguments), AnswerKind.QUESTION)
 
@@ -85,9 +83,10 @@ class StepsTest(unittest.TestCase):
             "observationVersion": "4",
             "error": {"code": "WORKFLOW_FAILED", "reason": "SECRET", "message": "internal"},
         })
-        text = present(project(index, failed), "Hello voice")
-        self.assertEqual(json.loads(text)["message"], "The workflow failed.")
-        self.assertNotIn("SECRET", text)
+        step = project(index, failed)
+        self.assertEqual(step.message, "The workflow failed.")
+        self.assertEqual(spoken_line(step), "The workflow failed.")
+        self.assertNotIn("SECRET", step.message)
 
     def test_unsupported_schema_and_mismatches_fail_closed(self):
         for schema in ("object{item: list<string>}", "object{name: string?}"):

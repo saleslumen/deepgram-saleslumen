@@ -1,5 +1,6 @@
 """The call flow: one ``Call`` owns agents, workflows, and the active run."""
 
+import asyncio
 from collections.abc import Callable
 from typing import Any
 
@@ -198,7 +199,7 @@ class Call:
         functions.extend(self.connector_tools.get(agent_name, ()))
         task_content = question_task(step)
         if agent.skills:
-            task_content += " If the caller asks what the product is, call skill; do not answer that from memory."
+            task_content += " If the caller asks something a skill covers, call skill; do not answer that from memory."
         return {
             "name": f"step-{step.sequence}",
             "role_message": self.catalog.shared,
@@ -220,9 +221,18 @@ class Call:
             if run is None:
                 return
             async def finish() -> None:
-                result = await run.signal(sequence, {})
-                target = call._node_after_signal(result)
-                await flow_manager.set_node_from_config(target)
+                try:
+                    result = await run.signal(sequence, {})
+                    target = call._node_after_signal(result)
+                    await flow_manager.set_node_from_config(target)
+                except asyncio.CancelledError:
+                    raise
+                except Exception as exc:
+                    logger.warning("Notice ack failed: {} {}", sequence, type(exc).__name__)
+                    try:
+                        await flow_manager.set_node_from_config(call._failed_agent_node())
+                    except Exception as recovery_exc:
+                        logger.warning("Notice recovery failed: {} {}", sequence, type(recovery_exc).__name__)
             run.schedule(finish())
         functions = list(self.connector_tools.get(agent_name, ()))
         return {
@@ -302,8 +312,12 @@ class Call:
             timeout_secs=START_TIMEOUT_SECS,
         )
 
+    def _skill_descriptions(self, agent: Agent) -> str:
+        return " ".join(f"{skill.name}: {' '.join(skill.description.split())}" for skill in agent.skills)
+
     def _skill_schema(self, agent: Agent) -> FlowsFunctionSchema:
         names = tuple(skill.name for skill in agent.skills)
+        descriptions = self._skill_descriptions(agent)
         bodies = {skill.name: skill.body for skill in agent.skills}
         async def handler(args: dict[str, Any], flow_manager) -> ConsolidatedFunctionResult:
             name = args.get("name")
@@ -312,8 +326,8 @@ class Call:
             return ({"body": bodies[name]}, None)
         return FlowsFunctionSchema(
             name="skill",
-            description="Return the markdown body for a granted skill.",
-            properties={"name": {"type": "string", "enum": names}},
+            description=f"Return the markdown body for a granted skill. Do not speak the description. {descriptions}",
+            properties={"name": {"type": "string", "enum": names, "description": descriptions}},
             required=["name"],
             handler=handler,
         )

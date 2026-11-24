@@ -1,5 +1,6 @@
 """One voice call. Entrypoint only."""
 
+from functools import cache
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -10,8 +11,8 @@ from pipecat.runner.utils import create_transport
 from pipecat.transports.base_transport import TransportParams
 
 from call.flow import END_CALL
-from catalog import load as load_catalog
-from config import load
+from catalog import Catalog, load as load_catalog
+from config import Config, load
 from live.routes import register
 from voice.pipeline import run_call
 
@@ -24,9 +25,13 @@ transport_params = {
 }
 
 
+@cache
+def _runtime() -> tuple[Config, Catalog]:
+    return load(), load_catalog(ROOT)
+
+
 async def bot(runner_args: RunnerArguments) -> None:
-    settings = load()
-    catalog = load_catalog(ROOT)
+    settings, catalog = _runtime()
     transport = await create_transport(runner_args, transport_params)
     await run_call(transport, runner_args, catalog, settings)
 

@@ -26,7 +26,7 @@ Each box is a Pipecat Flows node. `end_call` is available on every node, and a s
 
 ## Quickstart
 
-You need Python 3.13, [uv](https://docs.astral.sh/uv/), a Deepgram API key, and a Saleslumen API key with access to the refund workflow.
+You need Python 3.11+ (tested on 3.13), [uv](https://docs.astral.sh/uv/), a Deepgram API key, and a Saleslumen API key with access to the refund workflow.
 
 1. Install dependencies.
 

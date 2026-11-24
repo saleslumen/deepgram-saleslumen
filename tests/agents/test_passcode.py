@@ -2,7 +2,7 @@
 
 import unittest
 
-from agents.verification.passcode import accepts, attempt
+from agents.verification.passcode import accepts, attempt, contains_digits
 
 
 class PasscodeTest(unittest.TestCase):
@@ -21,6 +21,11 @@ class PasscodeTest(unittest.TestCase):
     def test_the_caller_must_have_said_the_code(self):
         self.assertTrue(attempt("one two three", "1, 2, 3"))
         self.assertFalse(attempt("one two three", "hello"))
+
+    def test_contains_digits_matches_contiguous_subsequence(self):
+        self.assertTrue(contains_digits("my 1 account is 555 010 2000", "5550102000"))
+        self.assertFalse(contains_digits("555 9 010 2000", "5550102000"))
+        self.assertFalse(contains_digits("5550102000", ""))
 
 
 if __name__ == "__main__":

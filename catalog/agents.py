@@ -1,6 +1,7 @@
 import importlib
 import inspect
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, Any, Self
 
@@ -13,7 +14,6 @@ from catalog.workflows import Grant, ManifestError, granted, load_manifests
 
 END = "end"
 _FROZEN = ConfigDict(frozen=True, extra="forbid", str_strip_whitespace=True)
-_AGENT_CFG = ConfigDict(frozen=True, extra="forbid", str_strip_whitespace=True, arbitrary_types_allowed=True)
 _http = TypeAdapter(AnyHttpUrl)
 
 def _unique_names(value: list[str]) -> list[str]:
@@ -68,29 +68,18 @@ class Pipeline(BaseModel):
                     raise ValueError("invalid route entry")
         return value
 
-class Agent(BaseModel):
-    model_config = _AGENT_CFG
-    name: str = ""
-    prompt: str = ""
-    tools: tuple[Callable, ...] | list[str] = Field(default_factory=list)
-    grants: tuple[Grant, ...] = ()
-    skills: tuple[Skill, ...] | list[str] = Field(default_factory=list)
-    connectors: tuple[Connector, ...] | list[Connector] = Field(default_factory=list)
+class _AgentSpec(BaseModel):
+    model_config = _FROZEN
+    tools: UniqueNames = Field(default_factory=list)
+    skills: UniqueNames = Field(default_factory=list)
+    connectors: list[Connector] = Field(default_factory=list)
     workflows: UniqueNames = Field(default_factory=list)
-    @field_validator("tools", "skills", "workflows", mode="before")
+    @field_validator("tools", "skills", "workflows", "connectors", mode="before")
     @classmethod
-    def named_lists(cls, value: Any) -> Any:
-        if isinstance(value, list) and (not value or isinstance(value[0], str)):
-            return _unique_names(value)
+    def default_empty(cls, value: Any) -> Any:
         return [] if value is None else value
-    @field_validator("connectors", mode="before")
-    @classmethod
-    def connector_list(cls, value: Any) -> Any:
-        return value if value is not None else []
     @model_validator(mode="after")
     def unique_connectors(self, info) -> Self:
-        if not isinstance(self.connectors, list):
-            return self
         seen: set[str] = set()
         for entry in self.connectors:
             if entry.name in seen:
@@ -98,6 +87,15 @@ class Agent(BaseModel):
                 raise ValueError(f"{agent} connectors repeats {entry.name}")
             seen.add(entry.name)
         return self
+
+@dataclass(frozen=True)
+class Agent:
+    name: str
+    prompt: str
+    tools: tuple[Callable, ...] = ()
+    grants: tuple[Grant, ...] = ()
+    skills: tuple[Skill, ...] = ()
+    connectors: tuple[Connector, ...] = ()
 
 def read_shared(root: Path) -> str:
     return _read(root / "agents" / "PROMPT.md")
@@ -130,9 +128,9 @@ def load_call(root: Path, skills: tuple[Skill, ...]) -> tuple[dict[str, Agent], 
         except AgentError as exc:
             errors.append(str(exc))
             continue
-        spec: Agent | None = None
+        spec: _AgentSpec | None = None
         try:
-            spec = Agent.model_validate(raw, context={"agent": name})
+            spec = _AgentSpec.model_validate(raw, context={"agent": name})
         except ValidationError as exc:
             errors.extend(format_errors(str(yaml_path), exc))
         try:
@@ -140,10 +138,10 @@ def load_call(root: Path, skills: tuple[Skill, ...]) -> tuple[dict[str, Agent], 
         except AgentError as exc:
             errors.append(str(exc))
             continue
-        tool_names = tuple(spec.tools) if spec is not None and isinstance(spec.tools, list) else ()
+        tool_names = tuple(spec.tools) if spec is not None else ()
         workflow_names = tuple(spec.workflows) if spec is not None else ()
-        skill_names = tuple(spec.skills) if spec is not None and isinstance(spec.skills, list) else ()
-        connectors = tuple(spec.connectors) if spec is not None and isinstance(spec.connectors, list) else ()
+        skill_names = tuple(spec.skills) if spec is not None else ()
+        connectors = tuple(spec.connectors) if spec is not None else ()
         tools = _resolve_tools(name, tool_names, errors)
         resolved_skills: tuple[Skill, ...] = ()
         if skill_names:

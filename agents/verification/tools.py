@@ -32,7 +32,7 @@ async def find_account(flow_manager, number: str) -> dict:
         number: The phone number digits the caller said for the account.
     """
     heard = _latest_user_text(flow_manager)
-    if passcode.digits(number) != passcode.digits(heard):
+    if not passcode.contains_digits(heard, number):
         return _account_miss(flow_manager)
     name = account.find(number)
     if name is None:

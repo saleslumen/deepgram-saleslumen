@@ -69,14 +69,6 @@ def load_skills(root: Path) -> tuple[Skill, ...]:
         skills.append(_parse(skill_file))
     return tuple(skills)
 
-def skill_prompt(skills: tuple[Skill, ...]) -> str:
-    lines = ["When the caller asks the question a skill describes, call that skill by name and answer with it. Do not speak the description. Do not offer to read a skill."]
-    if not skills:
-        lines.append("No skills are installed.")
-    else:
-        lines.extend(f"{skill.name}: {' '.join(skill.description.split())}" for skill in skills)
-    return "\n".join(lines)
-
 def selected_skills(skills: tuple[Skill, ...], names: tuple[str, ...]) -> tuple[Skill, ...]:
     found = {skill.name: skill for skill in skills}
     missing = [name for name in names if name not in found]

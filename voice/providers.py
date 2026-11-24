@@ -57,6 +57,21 @@ class DeepgramThinkLLMService(OpenAILLMService):
     def __init__(self, *, deepgram_api_key: str, settings: OpenAILLMService.Settings) -> None:
         super().__init__(api_key=deepgram_api_key, settings=settings)
         self._deepgram_api_key = deepgram_api_key
+        self._http_client: httpx.AsyncClient | None = None
+
+    def _http(self) -> httpx.AsyncClient:
+        if self._http_client is None:
+            self._http_client = httpx.AsyncClient(timeout=httpx.Timeout(10, read=120, write=10, pool=10))
+        return self._http_client
+
+    async def cleanup(self) -> None:
+        client = self._http_client
+        self._http_client = None
+        try:
+            await super().cleanup()
+        finally:
+            if client is not None:
+                await client.aclose()
 
     async def get_chat_completions(self, context):
         adapter = self.get_llm_adapter()
@@ -72,13 +87,14 @@ class DeepgramThinkLLMService(OpenAILLMService):
         if not is_given(temperature) or _is_unset(temperature):
             temperature = None
         body = think_request(model=str(self._settings.model), messages=list(params["messages"]), tools=tools, temperature=temperature)
-        return _ThinkChunks(self._deepgram_api_key, body)
+        return _ThinkChunks(self._http(), self._deepgram_api_key, body)
 
 
 class _ThinkChunks:
     """Async stream of OpenAI chunks parsed from a Think response."""
 
-    def __init__(self, deepgram_api_key: str, body: dict) -> None:
+    def __init__(self, client: httpx.AsyncClient, deepgram_api_key: str, body: dict) -> None:
+        self._client = client
         self._deepgram_api_key = deepgram_api_key
         self._body = body
         self._generator = None
@@ -96,20 +112,18 @@ class _ThinkChunks:
 
     async def _iterate(self):
         assembler = ThinkAssembler()
-        timeout = httpx.Timeout(10, read=120, write=10, pool=10)
         headers = {"Authorization": f"Token {self._deepgram_api_key}", "Content-Type": "application/json"}
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            async with client.stream("POST", THINK_URL, headers=headers, json=self._body) as response:
-                if response.status_code >= 400:
-                    detail = (await response.aread()).decode(errors="replace")[:300]
-                    raise RuntimeError(f"Think request failed with HTTP {response.status_code}: {detail}")
-                async for line in response.aiter_lines():
-                    item = assembler.feed(line)
-                    if item == "ignore":
-                        continue
-                    if item == "done":
-                        break
-                    yield ChatCompletionChunk.model_validate(item)
+        async with self._client.stream("POST", THINK_URL, headers=headers, json=self._body) as response:
+            if response.status_code >= 400:
+                detail = (await response.aread()).decode(errors="replace")[:300]
+                raise RuntimeError(f"Think request failed with HTTP {response.status_code}: {detail}")
+            async for line in response.aiter_lines():
+                item = assembler.feed(line)
+                if item == "ignore":
+                    continue
+                if item == "done":
+                    break
+                yield ChatCompletionChunk.model_validate(item)
         assembler.close()
 
 

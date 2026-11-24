@@ -822,37 +822,6 @@ wheels = [
 ]
 
 [[package]]
-name = "deepgram-saleslumen"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "httpx" },
-    { name = "pipecat-ai", extra = ["deepgram", "mcp", "runner", "webrtc"] },
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-    { name = "python-dotenv" },
-    { name = "pyyaml" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pipecat-ai", extra = ["cli"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "httpx", specifier = ">=0.28,<1" },
-    { name = "pipecat-ai", extras = ["deepgram", "mcp", "openrouter", "runner", "webrtc"], specifier = "==1.17.0" },
-    { name = "pydantic", specifier = ">=2.14.4,<3" },
-    { name = "pydantic-settings", specifier = ">=2.16.3,<3" },
-    { name = "python-dotenv", specifier = ">=1.1,<2" },
-    { name = "pyyaml", specifier = ">=6,<7" },
-]
-
-[package.metadata.requires-dev]
-dev = [{ name = "pipecat-ai", extras = ["cli"], specifier = "==1.17.0" }]
-
-[[package]]
 name = "deepgram-sdk"
 version = "7.19.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3047,6 +3016,37 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/2c/3e/f72d66374c14aaf759512cc6e35ac7d0c12293dc1819d07f0610c6b4b926/pipecat_resampler-0.2.0-cp311-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:bffd83ca22f9610f5553bba7bdd755b7a56176d4544cfdb648f99d8c2288532c", size = 73081, upload-time = "2026-11-08T21:37:47.959Z" },
     { url = "https://files.pythonhosted.org/packages/8a/92/6328df22ed52f890c8c4dd2beeb3fb88bfa1b41ccfb51a8a68b32ce18a7a/pipecat_resampler-0.2.0-cp311-abi3-win_amd64.whl", hash = "sha256:78ed622d015756000c7888286a47cd250c68c28054bcd80f112c41c4b6019548", size = 33920, upload-time = "2026-11-08T21:37:49.353Z" },
 ]
+
+[[package]]
+name = "pipecat-saleslumen"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "httpx" },
+    { name = "pipecat-ai", extra = ["deepgram", "mcp", "runner", "webrtc"] },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "python-dotenv" },
+    { name = "pyyaml" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pipecat-ai", extra = ["cli"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.28,<1" },
+    { name = "pipecat-ai", extras = ["deepgram", "mcp", "openrouter", "runner", "webrtc"], specifier = "==1.17.0" },
+    { name = "pydantic", specifier = ">=2.14.4,<3" },
+    { name = "pydantic-settings", specifier = ">=2.16.3,<3" },
+    { name = "python-dotenv", specifier = ">=1.1,<2" },
+    { name = "pyyaml", specifier = ">=6,<7" },
+]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pipecat-ai", extras = ["cli"], specifier = "==1.17.0" }]
 
 [[package]]
 name = "prompt-toolkit"

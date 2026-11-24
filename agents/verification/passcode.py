@@ -30,6 +30,16 @@ def digits(text: str) -> tuple[str, ...]:
     return tuple(found)
 
 
+def contains_digits(heard: str, target: str) -> bool:
+    """The target digits are non-empty and appear contiguously in the caller's words."""
+    expected = digits(target)
+    spoken = digits(heard)
+    if not expected or len(expected) > len(spoken):
+        return False
+    size = len(expected)
+    return any(spoken[i : i + size] == expected for i in range(len(spoken) - size + 1))
+
+
 def accepts(text: str) -> bool:
     """The spoken words are the code one, two, three."""
     return digits(text) == CODE

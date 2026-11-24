@@ -23,17 +23,20 @@ workflows:
   - refund
 skills:
   - saleslumen
-voice: flux-alexis-en
 ```
 
 Example `agents/pipeline.yaml`:
 
 ```yaml
 start: verification
-transitions:
+routes:
   verification:
     verified: workflow
     refused: end
+lines:
+  greeting: Hi, thanks for calling Saleslumen. What is the phone number on your account?
+  check_in: Are you still there?
+  goodbye: Thanks for calling. Goodbye.
 ```
 
 ## Add a custom tool
@@ -63,7 +66,7 @@ description: Use when the caller asks what Saleslumen is.
 Short body the model may speak when the skill is selected.
 ```
 
-Grant the skill name in the agent's `agent.yaml` `skills` list (Skill tuple).
+Grant the skill name in the agent's `agent.yaml` `skills` list (Skill tuple). Each granted skill's `name` and `description` are wired into the agent's `skill` tool schema automatically.
 
 ## Add a workflow
 

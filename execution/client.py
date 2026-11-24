@@ -12,7 +12,7 @@ import httpx
 from loguru import logger
 from pydantic import BaseModel, ValidationError
 
-from execution.models import ExecutionResource, Observation, RevisionDefinition, RevisionEnvelope, StatusEnvelope, TERMINAL_STATES, WorkflowDisplay
+from execution.models import ExecutionResource, Observation, RevisionDefinition, RevisionEnvelope, StatusEnvelope, TERMINAL_STATES
 
 WORKFLOW_ID = re.compile(r"^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$")
 SnapshotHandler = Callable[[Observation], Awaitable[None]]
@@ -96,20 +96,19 @@ class WorkflowClient:
         self._namespace_id = namespace_id
         self._workflow_id = ""
         self._client = client
+        self._owned_client: httpx.AsyncClient | None = None
 
     def use(self, workflow_id: str) -> None:
         if not isinstance(workflow_id, str) or WORKFLOW_ID.fullmatch(workflow_id) is None:
             raise WorkflowError(0, "INVALID_WORKFLOW", "the selected workflow id is not allowed")
         self._workflow_id = workflow_id
 
-    async def display_name(self) -> str:
-        selected = self._selected()
-        payload = await self._send("GET", f"/v1/workflows/{quote(selected, safe='')}", None, None)
-        resource = _read(WorkflowDisplay, payload, "INVALID_RESPONSE")
-        name = resource.display_name
-        if not isinstance(name, str) or name.strip() == "":
-            return selected
-        return name.strip()
+    async def aclose(self) -> None:
+        client = self._owned_client
+        if client is None:
+            return
+        self._owned_client = None
+        await client.aclose()
 
     async def revision(self, name: str) -> RevisionDefinition:
         selected = self._selected()
@@ -233,10 +232,12 @@ class WorkflowClient:
             headers["sl-namespace-id"] = self._namespace_id
         return headers
 
-    def _http(self) -> httpx.AsyncClient:
+    def _http(self) -> "_BorrowedClient":
         if self._client is not None:
             return _BorrowedClient(self._client)
-        return httpx.AsyncClient()
+        if self._owned_client is None:
+            self._owned_client = httpx.AsyncClient()
+        return _BorrowedClient(self._owned_client)
 
 
 class _BorrowedClient:
