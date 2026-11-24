@@ -54,6 +54,8 @@ You need Python 3.13, [uv](https://docs.astral.sh/uv/), a Deepgram API key, and 
 
 Open <http://localhost:7860/live> in a second tab during a call. The page is read-only and follows the latest call.
 
+![Live call view during a refund workflow](assets/live-call-view.png)
+
 - The top pane shows the Pipecat flow. The active node is highlighted, and a pulse runs along each branch the call takes.
 - The bottom pane shows the running Saleslumen workflow and the step it is waiting on.
 - The right column shows the transcript.
