@@ -1,6 +1,6 @@
 # Deepgram and Saleslumen Voice Demo
 
-A browser voice agent that verifies a caller and then runs a Saleslumen workflow for them. Deepgram handles speech and the model (Flux speech-to-text, Flux text-to-speech, and Think). [Pipecat](https://docs.pipecat.ai) 1.17 and Pipecat Flows run the conversation. Saleslumen Workflows runs the business process.
+A browser voice agent that verifies a caller and then runs a [Saleslumen](https://www.saleslumen.com/workflows) workflow for them. Deepgram handles speech and the model (Flux speech-to-text, Flux text-to-speech, and Think). [Pipecat](https://docs.pipecat.ai) 1.17 and Pipecat Flows run the conversation. Saleslumen Workflows runs the business process.
 
 ## Overview
 
