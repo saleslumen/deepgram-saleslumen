@@ -1,5 +1,5 @@
 [project]
-name = "deepgram-saleslumen"
+name = "pipecat-saleslumen"
 version = "0.1.0"
 description = "Local voice demo that watches a Saleslumen workflow."
 requires-python = ">=3.11"
