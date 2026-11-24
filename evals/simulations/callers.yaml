@@ -1,0 +1,29 @@
+name: callers
+judge:
+  eval:
+    factory: evals.llm.openrouter
+simulator:
+  factory: evals.llm.openrouter
+scenarios:
+  - name: impatient
+    persona: |
+      A caller who wants their problem fixed quickly. They interrupt when the bot
+      talks too long and say that is it once they have an answer or are tired of
+      waiting.
+    goal: Get a refund started or end the call.
+    success: >
+      The bot either started the refund workflow or ended the call after the
+      caller said that was it. It did not invent an amount, and it never said
+      the refund was done, submitted, or processed unless a workflow line had
+      said so.
+    max_turns: 12
+  - name: confused
+    persona: |
+      A caller who is unsure what Saleslumen is and asks before giving their
+      account details. They speak slowly and ask clarifying questions.
+    goal: Learn what Saleslumen is, then verify the account with phone 5550102000 and code one two three.
+    success: >
+      The bot answered what Saleslumen is from the skill or a short description,
+      then checked the account, and it did not verify a code the caller had not
+      said.
+    max_turns: 12

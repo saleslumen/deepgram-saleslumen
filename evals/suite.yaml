@@ -1,0 +1,9 @@
+concurrency: 1
+bots_dir: ..
+scenarios_dir: .
+spawn: "{python} {bot} --port {port}"
+suite:
+  - bot: bot.py
+    scenarios:
+      - scripted/calls
+      - simulations/callers

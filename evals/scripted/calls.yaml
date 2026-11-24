@@ -1,0 +1,124 @@
+name: calls
+judge:
+  eval:
+    factory: evals.llm.openrouter
+scenarios:
+  - name: done_after_outcome
+    turns:
+      - &number
+        user: "5550102000"
+        expect:
+          - event: function_call
+            calls:
+              - name: find_account
+          - event: llm_response
+            text_matches: ['\S']
+      - &code
+        user: "one two three"
+        expect:
+          - event: function_call
+            calls:
+              - name: check_passcode
+          - event: flow_node
+            text_matches: ['^workflow$']
+          - event: llm_response
+            text_matches: ['\S']
+      - &charged
+        user: "I was charged twice"
+        expect:
+          - event: function_call
+            calls:
+              - name: start_workflow
+            within_ms: 120000
+          - event: flow_node
+            text_matches: ['^step-']
+            within_ms: 120000
+      - &yes
+        user: "yes"
+        expect:
+          - event: function_call
+            calls:
+              - name: answer_step
+            within_ms: 120000
+          - event: flow_node
+            text_matches: ['^workflow$']
+            within_ms: 120000
+          - event: llm_response
+            text_matches: ['\S']
+      - user: "No. Thanks. That's it."
+        expect:
+          - event: function_call
+            calls:
+              - name: end_call
+          - event: flow_node
+            text_matches: ['^end$']
+          - event: llm_response
+            text_matches: ['\S']
+            check_from: turn_start
+  - name: skill_then_answer
+    turns:
+      - *number
+      - *code
+      - *charged
+      - user: "What is Saleslumen?"
+        expect:
+          - event: function_call
+            calls:
+              - name: skill
+          - event: llm_response
+            text_matches: ['\S']
+      - *yes
+  - name: yeah_thanks
+    turns:
+      - *number
+      - *code
+      - *charged
+      - &yeah
+        user: "Yeah. Thanks."
+        expect:
+          - event: function_call
+            calls:
+              - name: answer_step
+            within_ms: 120000
+          - event: flow_node
+            text_matches: ['^workflow$']
+            within_ms: 120000
+  - name: clarify_then_yeah
+    turns:
+      - *number
+      - *code
+      - *charged
+      - user: "What do you mean please confirm the refund?"
+        expect:
+          - event: llm_response
+      - *yeah
+  - name: three_wrong_codes
+    turns:
+      - *number
+      - &wrong_code
+        user: "nine nine nine"
+        expect:
+          - event: function_call
+            calls:
+              - name: check_passcode
+          - event: llm_response
+            text_matches: ['\S']
+      - *wrong_code
+      - user: "nine nine nine"
+        expect:
+          - event: function_call
+            calls:
+              - name: check_passcode
+          - event: flow_node
+            text_matches: ['^end$']
+  - name: wrong_then_right_number
+    turns:
+      - user: "5550102999"
+        expect:
+          - event: function_call
+            calls:
+              - name: find_account
+          - event: llm_response
+            text_matches: ['\S']
+      - *number
+      - *code

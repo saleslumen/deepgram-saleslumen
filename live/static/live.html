@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Live call</title>
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" />
+  <link rel="stylesheet" href="/live/static/live.css" />
+</head>
+
+<body>
+  <header>
+    <h1>Live call</h1>
+    <span class="status" id="status">Waiting for a call</span>
+    <span class="execution" id="execution"></span>
+  </header>
+  <main>
+    <section class="graphs" id="graphs">
+      <section class="pane theme-dark">
+        <h2>Pipecat Flows</h2>
+        <div class="surface" id="pipecat-surface"></div>
+      </section>
+      <div class="divider" id="graphs-divider" role="separator" aria-orientation="horizontal"></div>
+      <section class="pane theme-light">
+        <h2>Saleslumen Workflows</h2>
+        <div class="surface" id="saleslumen-surface"></div>
+      </section>
+    </section>
+    <div class="divider vertical" id="transcript-divider" role="separator" aria-orientation="vertical"></div>
+    <section class="transcript">
+      <h2>Transcript</h2>
+      <ol id="transcript"></ol>
+    </section>
+  </main>
+  <script type="module" src="/live/static/page.js"></script>
+</body>
+
+</html>

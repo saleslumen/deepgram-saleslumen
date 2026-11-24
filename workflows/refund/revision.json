@@ -1,0 +1,226 @@
+{
+  "changelog": "Classify the charge, then refund, explain, or review",
+  "definition": {
+    "input": "object{request: string}",
+    "vars": {
+      "assessment": "object{outcome: string}",
+      "confirmation": "object{accepted: bool}",
+      "refund": "object{message: string}",
+      "review_notice": "object{}",
+      "review_choice": "object{transfer: bool}",
+      "email_notice": "object{}",
+      "transfer_notice": "object{}",
+      "transfer_failed_notice": "object{}",
+      "follow_up_result": "object{sent: bool}",
+      "transfer_result": "object{started: bool}"
+    },
+    "signals": {
+      "confirm": "object{accepted: bool}",
+      "speech_complete": "object{}",
+      "review_choice": "object{transfer: bool}"
+    },
+    "steps": [
+      {
+        "id": "assess",
+        "label": "Classify the charge",
+        "call": {
+          "customScript": {
+            "script": "scripts/REPLACE_WITH_DEPLOYMENT_ID",
+            "function": "assess"
+          },
+          "args": {
+            "request": { "expr": "input.request" }
+          },
+          "result": "vars.assessment"
+        }
+      },
+      {
+        "id": "outcome",
+        "switch": {
+          "cases": [
+            { "when": "vars.assessment.outcome == \"duplicate\"", "next": "confirm" },
+            { "when": "vars.assessment.outcome == \"single_charge\"", "next": "single" },
+            { "when": "vars.assessment.outcome == \"already_refunded\"", "next": "refunded" }
+          ],
+          "default": "review_notice"
+        }
+      },
+      {
+        "id": "confirm",
+        "label": "I found a duplicate charge of twenty dollars. Please confirm the refund",
+        "awaitSignal": {
+          "signal": "confirm",
+          "result": "vars.confirmation"
+        }
+      },
+      {
+        "id": "authorized",
+        "switch": {
+          "cases": [
+            { "when": "vars.confirmation.accepted", "next": "refund" }
+          ],
+          "default": "declined"
+        }
+      },
+      {
+        "id": "declined",
+        "label": "The caller declined",
+        "return": {
+          "value": { "literal": { "message": "The refund was not made." } }
+        }
+      },
+      {
+        "id": "refund",
+        "label": "Refund the duplicate",
+        "call": {
+          "customScript": {
+            "script": "scripts/REPLACE_WITH_DEPLOYMENT_ID",
+            "function": "refund"
+          },
+          "result": "vars.refund"
+        }
+      },
+      {
+        "id": "done",
+        "label": "Return the refund",
+        "return": {
+          "value": { "expr": "vars.refund" }
+        }
+      },
+      {
+        "id": "single",
+        "label": "One charge",
+        "return": {
+          "value": {
+            "literal": {
+              "message": "There is only one charge of twenty dollars on that order, so nothing was refunded."
+            }
+          }
+        }
+      },
+      {
+        "id": "refunded",
+        "label": "Already refunded",
+        "return": {
+          "value": {
+            "literal": {
+              "message": "That charge has already been refunded, and there is nothing more to do."
+            }
+          }
+        }
+      },
+      {
+        "id": "review_notice",
+        "label": "Nothing was refunded, and a person needs to review this.",
+        "awaitSignal": {
+          "signal": "speech_complete",
+          "result": "vars.review_notice"
+        }
+      },
+      {
+        "id": "review_choice",
+        "label": "Would you like me to transfer you to a teammate now? If not, we will follow up by email.",
+        "awaitSignal": {
+          "signal": "review_choice",
+          "result": "vars.review_choice"
+        }
+      },
+      {
+        "id": "review_decision",
+        "switch": {
+          "cases": [
+            { "when": "vars.review_choice.transfer", "next": "transfer_notice" }
+          ],
+          "default": "email_notice"
+        }
+      },
+      {
+        "id": "email_notice",
+        "label": "A person will review it and we will follow up by email.",
+        "awaitSignal": {
+          "signal": "speech_complete",
+          "result": "vars.email_notice"
+        }
+      },
+      {
+        "id": "send_follow_up",
+        "label": "Send the follow-up",
+        "call": {
+          "customScript": {
+            "script": "scripts/REPLACE_WITH_DEPLOYMENT_ID",
+            "function": "send_follow_up"
+          },
+          "result": "vars.follow_up_result"
+        }
+      },
+      {
+        "id": "email_done",
+        "label": "The review stays open",
+        "return": {
+          "value": { "expr": "vars.follow_up_result" }
+        }
+      },
+      {
+        "id": "transfer_notice",
+        "label": "Transferring you to a teammate now.",
+        "awaitSignal": {
+          "signal": "speech_complete",
+          "result": "vars.transfer_notice"
+        }
+      },
+      {
+        "id": "transfer_to_teammate",
+        "label": "Transfer the call",
+        "call": {
+          "customScript": {
+            "script": "scripts/REPLACE_WITH_DEPLOYMENT_ID",
+            "function": "transfer_to_teammate"
+          },
+          "result": "vars.transfer_result"
+        }
+      },
+      {
+        "id": "transfer_decision",
+        "switch": {
+          "cases": [
+            { "when": "vars.transfer_result.started", "next": "transfer_started" }
+          ],
+          "default": "transfer_failed_notice"
+        }
+      },
+      {
+        "id": "transfer_started",
+        "label": "The caller moved",
+        "return": {
+          "value": { "literal": { "transfer_started": true } }
+        }
+      },
+      {
+        "id": "transfer_failed_notice",
+        "label": "I couldn't transfer you just now. A person will review it and we will follow up by email.",
+        "awaitSignal": {
+          "signal": "speech_complete",
+          "result": "vars.transfer_failed_notice"
+        }
+      },
+      {
+        "id": "send_follow_up_after",
+        "label": "Send the follow-up",
+        "call": {
+          "customScript": {
+            "script": "scripts/REPLACE_WITH_DEPLOYMENT_ID",
+            "function": "send_follow_up"
+          },
+          "result": "vars.follow_up_result"
+        }
+      },
+      {
+        "id": "transfer_email_done",
+        "label": "The review stays open",
+        "return": {
+          "value": { "expr": "vars.follow_up_result" }
+        }
+      }
+    ]
+  }
+}

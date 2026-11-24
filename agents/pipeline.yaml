@@ -1,0 +1,9 @@
+start: verification
+routes:
+  verification:
+    verified: workflow
+    refused: end
+lines:
+  greeting: Hi, thanks for calling Saleslumen. What is the phone number on your account?
+  check_in: Are you still there?
+  goodbye: Thanks for calling. Goodbye.

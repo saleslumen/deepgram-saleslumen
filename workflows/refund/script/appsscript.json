@@ -1,0 +1,8 @@
+{
+  "runtime": "nodejs22",
+  "timeZone": "America/New_York",
+  "dependencies": {
+    "libraries": [],
+    "enabledServices": []
+  }
+}

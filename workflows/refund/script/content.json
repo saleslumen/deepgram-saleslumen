@@ -1,0 +1,16 @@
+{
+  "content": {
+    "files": [
+      {
+        "name": "appsscript.json",
+        "type": "JSON",
+        "source": "{\n  \"runtime\": \"nodejs22\",\n  \"timeZone\": \"America/New_York\",\n  \"dependencies\": {\n    \"libraries\": [],\n    \"enabledServices\": []\n  }\n}\n"
+      },
+      {
+        "name": "Code.js",
+        "type": "SERVER_JS",
+        "source": "/**\n * Placeholder payment records for the refund demo.\n * The request text picks one outcome. The revision owns every spoken line.\n * @param {Object} args the call arguments, with the caller's reason on request\n * @returns {Object} the outcome only\n */\nfunction assess(args) {\n  const text = String((args && args.request) || \"\").toLowerCase();\n  const tokens = new Set(text.split(/[^a-z0-9]+/).filter(Boolean));\n  if (text.includes(\"already refunded\")) {\n    return { outcome: \"already_refunded\" };\n  }\n  if (text.includes(\"same payment intent\")) {\n    return { outcome: \"single_charge\" };\n  }\n  if (tokens.has(\"duplicate\") || tokens.has(\"twice\") || tokens.has(\"double\")) {\n    return { outcome: \"duplicate\" };\n  }\n  return { outcome: \"manual_review\" };\n}\n\n/**\n * Placeholder follow-up. Swap this for a real send later.\n * It takes no address and returns no address.\n * @returns {Object} whether the follow-up was accepted\n */\nfunction send_follow_up() {\n  return { sent: true };\n}\n\n/**\n * Placeholder transfer. This demo never starts one and never calls Twilio.\n * @returns {Object} whether a teammate took the call\n */\nfunction transfer_to_teammate() {\n  return { started: false };\n}\n\n/**\n * Placeholder refund. The revision calls this only after a duplicate is confirmed.\n * @returns {Object} the result sentence\n */\nfunction refund() {\n  return { message: \"The duplicate charge of twenty dollars was refunded.\" };\n}\n"
+      }
+    ]
+  }
+}
