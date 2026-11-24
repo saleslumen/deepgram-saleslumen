@@ -184,3 +184,7 @@ Use a Saleslumen API key with `workflows.read` and `workflows.write`. Keep the d
 
 - [CONTRIBUTING.md](CONTRIBUTING.md): add or change agents, tools, connectors, skills, and workflows.
 - [AGENTS.md](AGENTS.md): how the call, the nodes, and the live view work inside.
+
+## License
+
+[MIT](LICENSE)
